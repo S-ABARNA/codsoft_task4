@@ -1,0 +1,61 @@
+import pandas as pd
+from sklearn.metrics.pairwise import cosine_similarity
+from scipy.sparse import csr_matrix
+
+# Sample dataset
+data = {
+    'user_id': [1, 1, 1, 2, 2, 2, 3, 3, 4, 4],
+    'movie_id': [1, 2, 3, 1, 2, 4, 2, 3, 3, 4],
+    'rating': [5, 4, 3, 4, 5, 2, 3, 4, 4, 5]
+}
+
+df = pd.DataFrame(data)
+df_pivot = df.pivot(index='user_id', columns='movie_id', values='rating').fillna(0)
+df_pivot
+
+# Calculate the cosine similarity between users
+similarity_matrix = cosine_similarity(df_pivot)
+similarity_df = pd.DataFrame(similarity_matrix, index=df_pivot.index, columns=df_pivot.index)
+similarity_df
+
+def get_recommendations(user_id, df_pivot, similarity_df, top_n=2):
+    # Get the similarity scores for the user
+    user_similarities = similarity_df[user_id]
+    
+    # Get the movies rated by the user
+    user_ratings = df_pivot.loc[user_id]
+    
+    # Calculate the weighted sum of ratings of similar users
+    weighted_sum = df_pivot.T.dot(user_similarities).div(user_similarities.sum())
+    
+    # Exclude movies already rated by the user
+    recommendations = weighted_sum[user_ratings == 0].sort_values(ascending=False)
+    
+    return recommendations.head(top_n)
+
+# Get recommendations for user 1
+recommendations = get_recommendations(1, df_pivot, similarity_df)
+recommendations
+ 
+movies = {
+    'movie_id': [1, 2, 3, 4],
+    'title': ['Movie A', 'Movie B', 'Movie C', 'Movie D'],
+    'genre': ['Action', 'Action', 'Drama', 'Drama']
+}
+
+user_preferences = {
+    'user_id': [1, 2, 3, 4],
+    'preferred_genre': ['Action', 'Drama', 'Action', 'Drama']
+}
+
+movies_df = pd.DataFrame(movies)
+users_df = pd.DataFrame(user_preferences)
+
+def recommend_movies(user_id, users_df, movies_df, top_n=2):
+    user_genre = users_df[users_df['user_id'] == user_id]['preferred_genre'].values[0]
+    recommendations = movies_df[movies_df['genre'] == user_genre].head(top_n)
+    return recommendations
+
+# Get recommendations for user 1
+recommendations = recommend_movies(1, users_df, movies_df)
+recommendations
